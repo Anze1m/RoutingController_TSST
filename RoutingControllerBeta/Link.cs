@@ -78,5 +78,49 @@ namespace RoutingControllerBeta
         {
             Console.Write(sourceRouter.getCallSign() + destinationRouter.getCallSign() + weight);
         }
+
+        public Link(LRMRCCommunications.LinkStateUpdate update)
+        {
+            this.sourceRouter = new Router(update.beginNode.id, update.beginNode.snId, update.beginNode.asId);
+            this.sourceInterface = update.beginSNPP;
+            this.destinationRouter = new Router(update.endNode.id, update.endNode.snId, update.endNode.asId);
+            this.destinationInterface = update.endSNPP;
+            this.capacity = update.capacity;
+            this.weight = 1 / update.capacity;
+        }
+
+        public bool isEqual(Link linkToCompare)
+        {
+            if (!this.sourceRouter.isEqual(linkToCompare.getSourceRouter()))
+                return false;
+
+            if (!this.destinationRouter.isEqual(linkToCompare.getDestinationRouter()))
+                return false;
+
+            if (this.sourceInterface != linkToCompare.getSourceInterface())
+                return false;
+
+            if (this.destinationInterface != linkToCompare.getDestinationInterface())
+                return false;
+
+            if (this.capacity != linkToCompare.getCapacity())
+                return false;
+
+            if (this.weight != linkToCompare.getWeight())
+                return false;
+
+            return true;
+        }
+
+        public bool updateCapacity(Link linkToCompare)
+        {
+            if(this.sourceRouter.isEqual(linkToCompare.getSourceRouter()) && this.destinationRouter.isEqual(linkToCompare.getDestinationRouter()) && this.sourceInterface == linkToCompare.getSourceInterface() && this.destinationInterface == linkToCompare.getDestinationInterface())
+            {
+                this.capacity = linkToCompare.getCapacity();
+                this.weight = linkToCompare.getWeight();
+                return true;
+            }
+            return false;
+        }
     }
 }

@@ -11,13 +11,14 @@ namespace RoutingControllerBeta
     {
         static void Main(string[] args)
         {
-
+            Mutex consoleMutex = new Mutex();
 
             string subNetworkCallSign = "SN.0";
             string autonomicNetworkCallSign = "AS.0";
             int RCReqPort = 0;
             int RCResPort = 0;
             int mainPort = 0;
+            int routerTimeout = 5000;
             string addressesFileName = "addresses.txt";
             string name = "RC.0";
 
@@ -50,13 +51,17 @@ namespace RoutingControllerBeta
 
                 if (param[0].Equals("TEST"))
                     whichTable = Int32.Parse(param[1]);
-            }
 
+                if (param[0].Equals("routerTimeout"))
+                    routerTimeout = Int32.Parse(param[1]);
+            }
+            consoleMutex.WaitOne();
             Logger.timestamp();
             Console.ForegroundColor = ConsoleColor.Blue;
             Console.WriteLine("Routing controller started! <| " + subNetworkCallSign + " || " + autonomicNetworkCallSign + " |>");
             Console.Title = "RC (" + subNetworkCallSign + " " + autonomicNetworkCallSign + ")";
             Console.ForegroundColor = ConsoleColor.White;
+            consoleMutex.ReleaseMutex();
 
             string addressesPath = Environment.CurrentDirectory + "\\" + addressesFileName;
             AddressBook addressBook = new AddressBook(addressesPath);
@@ -105,13 +110,13 @@ namespace RoutingControllerBeta
 
             if (RCReqPort != 0)
             {
-                RCRequestHandler handler = new RCRequestHandler(RCReqPort, linkTable, subNetworkCallSign, autonomicNetworkCallSign);
+                RCRequestHandler handler = new RCRequestHandler(RCReqPort, linkTable, subNetworkCallSign, autonomicNetworkCallSign, consoleMutex);
                 Thread RCRequestHandlerThread = new Thread(() => handler.run());
                 RCRequestHandlerThread.Start();
             }
 
-            RouteRequestResolver routeRequestResolver = new RouteRequestResolver(addressBook, RCResPort, linkTable, subNetworkCallSign, autonomicNetworkCallSign, name);
-            LinkTableUpdater linkTableUpdater = new LinkTableUpdater(linkTable);
+            RouteRequestResolver routeRequestResolver = new RouteRequestResolver(addressBook, RCResPort, linkTable, subNetworkCallSign, autonomicNetworkCallSign, name, consoleMutex);
+            LinkTableUpdater linkTableUpdater = new LinkTableUpdater(linkTable, routerTimeout, consoleMutex);
 
             MessageListener messageListener = new MessageListener(linkTableUpdater, routeRequestResolver, mainPort);
             messageListener.run();

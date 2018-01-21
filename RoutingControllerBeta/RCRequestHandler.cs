@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RoutingControllerBeta
@@ -16,12 +17,14 @@ namespace RoutingControllerBeta
         LinkTable linkTable;
         string subNetworkCallSign;
         string autonomicNetworkCallSign;
-        public RCRequestHandler(int portNumber, LinkTable linkTable, string subNetworkCallSign, string autonomicNetworkCallSign)
+        Mutex consoleMutex;
+        public RCRequestHandler(int portNumber, LinkTable linkTable, string subNetworkCallSign, string autonomicNetworkCallSign, Mutex consoleMutex)
         {
             this.portNumber = portNumber;
             this.linkTable = linkTable;
             this.subNetworkCallSign = subNetworkCallSign;
             this.autonomicNetworkCallSign = autonomicNetworkCallSign;
+            this.consoleMutex = consoleMutex;
         }
 
         public void run()
@@ -45,11 +48,13 @@ namespace RoutingControllerBeta
                 object o = (object)binaryFormatter.Deserialize(memoryStream);
                 InnerRoutingCommunication.Request request = (InnerRoutingCommunication.Request)o;
 
+                consoleMutex.WaitOne();
                 Logger.timestamp();
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.Write("Received RoutePathRequest ");
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.WriteLine("(EntryPoint: " + request.callSign + " Capacity: " + request.requestedCapacity + ")");
+                consoleMutex.ReleaseMutex();
 
                 Dijkstra dijkstra = new Dijkstra(new AddressBook(), 0, linkTable.copy(), new Router(request.callSign, request.subNetworkCallSign, request.autonomicNetworkCallSign), request.requestedCapacity, subNetworkCallSign, autonomicNetworkCallSign, false);
                 List<Path> calculatedPaths = dijkstra.getExitingPaths();
@@ -65,11 +70,13 @@ namespace RoutingControllerBeta
                 byte[] sendbuf = memoryStream.ToArray();
                 send = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                 send.SendTo(sendbuf, new IPEndPoint(IPAddress.Parse("127.0.0.1"), request.portNumber));
+                consoleMutex.WaitOne();
                 Logger.timestamp();
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.Write("Sent RoutePathResponse ");
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.WriteLine("(PossibleCrossings: " + calculatedPaths.Count + ")");
+                consoleMutex.ReleaseMutex();
             }
         }
     }

@@ -43,6 +43,48 @@ namespace RoutingControllerBeta
             }
             return linkTableToReturn;
         }
+
+        public void delete(string id)
+        {
+            bool change = false;
+            do
+            {
+                for (int i = 0; i < linkList.Count; i++)
+                {
+                    change = false;
+                    if (linkList[i].getSourceRouter().getCallSign().Equals(id) || linkList[i].getDestinationRouter().getCallSign().Equals(id))
+                    {
+                        change = true;
+                        linkList.RemoveAt(i);
+                        break;
+                    }
+                }
+            } while (change);
+        }
+
+        public bool update(Link linkToUpdate)
+        {
+            foreach(Link link in linkList)
+            {
+                if (!link.isEqual(linkToUpdate))
+                    continue;
+                return false;
+            }
+
+            bool updateMade = false;
+
+            foreach(Link link in linkList)
+            {
+                updateMade = link.updateCapacity(linkToUpdate);
+                if (updateMade)
+                    break;
+            }
+
+            if (!updateMade)
+                linkList.Add(linkToUpdate.copy());
+
+            return true;
+        }
     }
 
     

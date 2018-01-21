@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RoutingControllerBeta
@@ -16,10 +17,11 @@ namespace RoutingControllerBeta
         string subNetworkCallSign;
         string autonomicNetworkCallSign;
         string name;
+        Mutex consoleMutex;
 
-        public RouteRequestResolver(AddressBook addressBook, int myPortNumber, LinkTable linkTable, string subNetworkCallSign, string autonomicNetworkCallSign, string name)
+        public RouteRequestResolver(AddressBook addressBook, int myPortNumber, LinkTable linkTable, string subNetworkCallSign, string autonomicNetworkCallSign, string name, Mutex consoleMutex)
         {
-            
+            this.consoleMutex = consoleMutex;
             this.addressBook = addressBook;
             this.myPortNumber = myPortNumber;
             this.linkTable = linkTable;
@@ -30,6 +32,7 @@ namespace RoutingControllerBeta
 
         public void answerTo(byte[] receivedData)
         {
+            consoleMutex.WaitOne();
             Logger.timestamp();
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write("Received RouteTableQuery ");
@@ -39,11 +42,12 @@ namespace RoutingControllerBeta
 
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("(From: " + request.from + " To: " + request.to + " Capacity: " + request.bitrate + ")");
+            consoleMutex.ReleaseMutex();
 
             Dijkstra dijkstra = new Dijkstra(addressBook, myPortNumber, linkTable.copy(), startingRouter, request.bitrate, subNetworkCallSign, autonomicNetworkCallSign, true);
             string destination = request.to;
             string[] destinationParams = destination.Split(';');
-            Path pathToReturn = null;
+            Path pathToReturn = new Path(new Router(request.from, subNetworkCallSign, autonomicNetworkCallSign));
             if(destinationParams[0].Split('.')[0].Equals("AS"))
             {
                 pathToReturn = dijkstra.getPathTo(destinationParams[0]);
@@ -63,18 +67,19 @@ namespace RoutingControllerBeta
 
             }
             List<RCcommunications.Hop> transformedPath = new List<RCcommunications.Hop>();
-            
-            foreach(Link link in pathToReturn.getPath())
-            {
-                if (link.getSourceRouter().getAutonomicNetworkCallSign().Equals(autonomicNetworkCallSign) && link.getSourceRouter().getSubNetworkCallSign().Equals(subNetworkCallSign))
-                    transformedPath.Add(new RCcommunications.Hop(link.getSourceRouter().getCallSign(), link.getSourceInterface(), link.getDestinationInterface(), link.getSourceRouter().getAutonomicNetworkCallSign(), link.getSourceRouter().getSubNetworkCallSign()));
-                else
-                    transformedPath.Add(new RCcommunications.Hop(link.getSourceRouter().getCallSign(), 0, 0, link.getSourceRouter().getAutonomicNetworkCallSign(), link.getSourceRouter().getSubNetworkCallSign()));
 
+            if (!(pathToReturn == null))
+            {
+                foreach(Link link in pathToReturn.getPath())
+                    {
+                        if (link.getSourceRouter().getAutonomicNetworkCallSign().Equals(autonomicNetworkCallSign) && link.getSourceRouter().getSubNetworkCallSign().Equals(subNetworkCallSign))
+                            transformedPath.Add(new RCcommunications.Hop(link.getSourceRouter().getCallSign(), link.getSourceInterface(), link.getDestinationInterface(), link.getSourceRouter().getAutonomicNetworkCallSign(), link.getSourceRouter().getSubNetworkCallSign()));
+                        else
+                            transformedPath.Add(new RCcommunications.Hop(link.getSourceRouter().getCallSign(), 0, 0, link.getSourceRouter().getAutonomicNetworkCallSign(), link.getSourceRouter().getSubNetworkCallSign()));
+
+                    }
             }
-            //if (pathToReturn.getPath().Last().getDestinationRouter().getAutonomicNetworkCallSign().Equals(autonomicNetworkCallSign) && pathToReturn.getPath().Last().getDestinationRouter().getSubNetworkCallSign().Equals(subNetworkCallSign))
-            //    transformedPath.Add(new RCcommunications.Hop(pathToReturn.getPath().Last().getDestinationRouter().getCallSign(), pathToReturn.getPath().Last().getSourceInterface(), pathToReturn.getPath().Last().getDestinationInterface(), pathToReturn.getPath().Last().getDestinationRouter().getAutonomicNetworkCallSign(), pathToReturn.getPath().Last().getDestinationRouter().getSubNetworkCallSign()));
-            //else
+            
             if(pathToReturn.getPath().Count > 0)
                 transformedPath.Add(new RCcommunications.Hop(pathToReturn.getPath().Last().getDestinationRouter().getCallSign(), 0, 0, pathToReturn.getPath().Last().getDestinationRouter().getAutonomicNetworkCallSign(), pathToReturn.getPath().Last().getDestinationRouter().getSubNetworkCallSign()));
             
@@ -84,6 +89,7 @@ namespace RoutingControllerBeta
             Socket send = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             send.SendTo(sendbuf, new IPEndPoint(IPAddress.Parse("127.0.0.1"), request.senderPort));
 
+            consoleMutex.WaitOne();
             Logger.timestamp();
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write("Sent RouteTableQueryResponse ");
@@ -92,6 +98,8 @@ namespace RoutingControllerBeta
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.Write("#");
             Console.ForegroundColor = ConsoleColor.White;
+            consoleMutex.ReleaseMutex();
+
             foreach (RCcommunications.Hop hop in transformedPath)
             {
                 Console.Write(hop.routerID + ";" + hop.SN + ";" + hop.AS);

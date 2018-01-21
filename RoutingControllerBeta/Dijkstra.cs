@@ -17,6 +17,7 @@ namespace RoutingControllerBeta
         RouterTable visitedRouters;
         string subNetworkCallSign;
         string autonomicNetworkCallSign;
+        Router startingRouter;
 
         public Dijkstra(AddressBook addressBook, int myPortNumber, LinkTable linkTable, Router startingRouter, double requestedCapacity, string subNetworkCallSign, string autonomicNetworkCallSign, bool totalASDijkstra)
         {
@@ -24,7 +25,7 @@ namespace RoutingControllerBeta
             this.autonomicNetworkCallSign = autonomicNetworkCallSign;
             visitedRouters = new RouterTable();
             calculatedPaths = new List<Path>();
-
+            this.startingRouter = startingRouter.copy();
             Router currentRouter = startingRouter;
             bool firstIteration = true;
 
@@ -214,7 +215,7 @@ namespace RoutingControllerBeta
 
         public Path getPathTo(string autonomicNetworkCallSign)
         {
-            Path pathToReturn = null;
+            Path pathToReturn = new Path(startingRouter);
 
             foreach (Path path in calculatedPaths)
                 if (path.getDestinationRouter().getAutonomicNetworkCallSign().Equals(autonomicNetworkCallSign))
@@ -229,12 +230,13 @@ namespace RoutingControllerBeta
 
         public Path getPathTo(string subNetworkCallSign, string autonomicNetworkCallSign)
         {
-            Path pathToReturn = null;
+            Path pathToReturn = new Path(startingRouter);
 
             foreach (Path path in calculatedPaths)
                 if (path.getDestinationRouter().getAutonomicNetworkCallSign().Equals(autonomicNetworkCallSign) && path.getDestinationRouter().getSubNetworkCallSign().Equals(subNetworkCallSign))
                     pathToReturn = path;
 
+            if(pathToReturn != null)
             foreach (Path path in calculatedPaths)
                 if (path.getDestinationRouter().getAutonomicNetworkCallSign().Equals(autonomicNetworkCallSign) && pathToReturn.getWeight() > path.getWeight() && path.getDestinationRouter().getSubNetworkCallSign().Equals(subNetworkCallSign))
                     pathToReturn = path;
