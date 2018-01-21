@@ -32,7 +32,6 @@ namespace RoutingControllerBeta
             IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), portNumber);
             orderingSocket.Bind(endPoint);
             Socket send;
-            Console.WriteLine("RC listening preparation started");
             while (true)
             {
                 byte[] buffer = new byte[orderingSocket.SendBufferSize];
@@ -46,13 +45,19 @@ namespace RoutingControllerBeta
                 object o = (object)binaryFormatter.Deserialize(memoryStream);
                 InnerRoutingCommunication.Request request = (InnerRoutingCommunication.Request)o;
 
+                Logger.timestamp();
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write("Received RoutePathRequest ");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine("(EntryPoint: " + request.callSign + " Capacity: " + request.requestedCapacity + ")");
+
                 Dijkstra dijkstra = new Dijkstra(new AddressBook(), 0, linkTable.copy(), new Router(request.callSign, request.subNetworkCallSign, request.autonomicNetworkCallSign), request.requestedCapacity, subNetworkCallSign, autonomicNetworkCallSign, false);
                 List<Path> calculatedPaths = dijkstra.getExitingPaths();
                 InnerRoutingCommunication.Response response = new InnerRoutingCommunication.Response();
                 foreach(Path path in calculatedPaths)
                 {
                     response.add(path.getDestinationRouter().getCallSign(), path.getDestinationRouter().getSubNetworkCallSign(), path.getDestinationRouter().getAutonomicNetworkCallSign(), path.getSourceInterface(), path.getDestinationInterface(), path.getCapacity(), path.getWeight());
-                    path.write();
+                    //path.write();
                 }
                 binaryFormatter = new BinaryFormatter();
                 memoryStream = new MemoryStream();
@@ -60,6 +65,11 @@ namespace RoutingControllerBeta
                 byte[] sendbuf = memoryStream.ToArray();
                 send = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                 send.SendTo(sendbuf, new IPEndPoint(IPAddress.Parse("127.0.0.1"), request.portNumber));
+                Logger.timestamp();
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write("Sent RoutePathResponse ");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine("(PossibleCrossings: " + calculatedPaths.Count + ")");
             }
         }
     }

@@ -26,14 +26,20 @@ namespace RoutingControllerBeta
             this.subNetworkCallSign = subNetworkCallSign;
             this.autonomicNetworkCallSign = autonomicNetworkCallSign;
             this.name = name;
-            Console.WriteLine("RRR constructor");
         }
 
         public void answerTo(byte[] receivedData)
         {
-            Console.WriteLine("RRR answer processing...");
+            Logger.timestamp();
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write("Received RouteTableQuery ");
+
             RCcommunications.RouteRequest request = (RCcommunications.RouteRequest)Communications.Serialization.Deserialize(receivedData);
             Router startingRouter = new Router(request.from, subNetworkCallSign, autonomicNetworkCallSign);
+
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine("(From: " + request.from + " To: " + request.to + " Capacity: " + request.bitrate + ")");
+
             Dijkstra dijkstra = new Dijkstra(addressBook, myPortNumber, linkTable.copy(), startingRouter, request.bitrate, subNetworkCallSign, autonomicNetworkCallSign, true);
             string destination = request.to;
             string[] destinationParams = destination.Split(';');
@@ -77,7 +83,23 @@ namespace RoutingControllerBeta
             byte[] sendbuf = Communications.Serialization.Serialize(response);
             Socket send = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             send.SendTo(sendbuf, new IPEndPoint(IPAddress.Parse("127.0.0.1"), request.senderPort));
-            Console.WriteLine("RRR answer finished");
+
+            Logger.timestamp();
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write("Sent RouteTableQueryResponse ");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("(");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write("#");
+            Console.ForegroundColor = ConsoleColor.White;
+            foreach (RCcommunications.Hop hop in transformedPath)
+            {
+                Console.Write(hop.routerID + ";" + hop.SN + ";" + hop.AS);
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write("#");
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+            Console.WriteLine(")");
         }
     }
 }

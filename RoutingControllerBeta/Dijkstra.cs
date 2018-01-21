@@ -179,7 +179,7 @@ namespace RoutingControllerBeta
                 }
                 if (!change)
                 {
-                    this.write();
+                    //this.write();
                     orderingSocket.Close();
                     break;
                 }

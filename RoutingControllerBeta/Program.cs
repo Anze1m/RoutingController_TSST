@@ -52,13 +52,15 @@ namespace RoutingControllerBeta
                     whichTable = Int32.Parse(param[1]);
             }
 
-            Console.WriteLine(subNetworkCallSign + " || " + autonomicNetworkCallSign + " || " + mainPort);
-
+            Logger.timestamp();
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine("Routing controller started! <| " + subNetworkCallSign + " || " + autonomicNetworkCallSign + " |>");
+            Console.Title = "RC (" + subNetworkCallSign + " " + autonomicNetworkCallSign + ")";
+            Console.ForegroundColor = ConsoleColor.White;
 
             string addressesPath = Environment.CurrentDirectory + "\\" + addressesFileName;
             AddressBook addressBook = new AddressBook(addressesPath);
-
-            Console.WriteLine("After loading addresses");
+            
 
             LinkTable linkTable = new LinkTable();
 
@@ -106,11 +108,10 @@ namespace RoutingControllerBeta
                 RCRequestHandler handler = new RCRequestHandler(RCReqPort, linkTable, subNetworkCallSign, autonomicNetworkCallSign);
                 Thread RCRequestHandlerThread = new Thread(() => handler.run());
                 RCRequestHandlerThread.Start();
-                Console.WriteLine("RC listening preparation finished");
             }
 
             RouteRequestResolver routeRequestResolver = new RouteRequestResolver(addressBook, RCResPort, linkTable, subNetworkCallSign, autonomicNetworkCallSign, name);
-            LinkTableUpdater linkTableUpdater = new LinkTableUpdater();
+            LinkTableUpdater linkTableUpdater = new LinkTableUpdater(linkTable);
 
             MessageListener messageListener = new MessageListener(linkTableUpdater, routeRequestResolver, mainPort);
             messageListener.run();

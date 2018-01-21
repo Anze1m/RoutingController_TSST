@@ -32,20 +32,22 @@ namespace RoutingControllerBeta
         {
             while (true)
             {
-                Console.WriteLine("Waiting for message from CC");
                 byte[] buffer = new byte[orderingSocket.SendBufferSize];
                 int readBytesNumber = orderingSocket.ReceiveFrom(buffer, ref manager);
                 byte[] receivedData = new byte[readBytesNumber];
                 Array.Copy(buffer, receivedData, readBytesNumber);
-                Console.WriteLine("Received message from CC");
                 Communications.Message message = Communications.Serialization.Deserialize(receivedData);
-                if(message.messageType.Equals("RouteRequest"))
+                if (message.messageType.Equals("RouteRequest"))
                 {
-                    Thread routing = new Thread(() => routeRequestResolver.answerTo(receivedData));
-                    routing.Start();
+                    Thread routingThread = new Thread(() => routeRequestResolver.answerTo(receivedData));
+                    routingThread.Start();
                 }
-
-                ///jakieś updatowanie tablicy na kiju
+                else
+                {
+                    Thread linksUpdateThread = new Thread(() => linkTableUpdater.update(receivedData));
+                    linksUpdateThread.Start();
+                }
+                
             }
         }
     }
