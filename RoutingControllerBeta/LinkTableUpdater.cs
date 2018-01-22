@@ -39,8 +39,10 @@ namespace RoutingControllerBeta
                 devicesTimers.Add(receivedCallSign, new Timer(deviceDead, receivedCallSign, timeout, 0));
                 consoleMutex.WaitOne();
                 Logger.timestamp();
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Router " + receivedCallSign + " is up");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write("Router " + receivedCallSign + " is ");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("up");
                 Console.ForegroundColor = ConsoleColor.White;
                 consoleMutex.ReleaseMutex();
 
@@ -55,9 +57,12 @@ namespace RoutingControllerBeta
                 {
                     devicesStates[receivedCallSign] = true;
                     devicesTimers[receivedCallSign] = new Timer(deviceDead, receivedCallSign, timeout, 0);
+                    consoleMutex.WaitOne();
                     Logger.timestamp();
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("Router " + receivedCallSign + " is up");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.Write("Router " + receivedCallSign + " is ");
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("up");
                     Console.ForegroundColor = ConsoleColor.White;
                     consoleMutex.ReleaseMutex();
                 }
@@ -92,8 +97,10 @@ namespace RoutingControllerBeta
 
             consoleMutex.WaitOne();
             Logger.timestamp();
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write("Router " + id + " is ");
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Router " + id + " is down");
+            Console.WriteLine("down");
             Console.ForegroundColor = ConsoleColor.White;
             consoleMutex.ReleaseMutex();
         }
