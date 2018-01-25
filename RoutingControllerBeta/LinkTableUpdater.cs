@@ -27,62 +27,98 @@ namespace RoutingControllerBeta
 
         public void update(byte[] receivedData)
         {
-            LRMRCCommunications.LinkStateUpdate linkToUpdate = (LRMRCCommunications.LinkStateUpdate)Communications.Serialization.Deserialize(receivedData);
-            Link receivedLink = new Link(linkToUpdate);
-            string receivedCallSign = receivedLink.getSourceRouter().getCallSign();
+            LRMRCCommunications.BatchUpdate batch = (LRMRCCommunications.BatchUpdate)Communications.Serialization.Deserialize(receivedData);
 
+            
 
-            linkTableMutex.WaitOne();
-            if (!devicesTimers.ContainsKey(receivedCallSign))
+            if (batch.linkList.Count > 0)
             {
-                devicesStates.Add(receivedCallSign, true);
-                devicesTimers.Add(receivedCallSign, new Timer(deviceDead, receivedCallSign, timeout, 0));
-                consoleMutex.WaitOne();
-                Logger.timestamp();
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.Write("Router " + receivedCallSign + " is ");
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("up");
-                Console.ForegroundColor = ConsoleColor.White;
-                consoleMutex.ReleaseMutex();
-
-            }
-            else
-            {
-                if (devicesStates[receivedCallSign] == true)
+                linkTableMutex.WaitOne();
+                int oldLinkCount = linkTable.getNumberOfLinksFrom(batch.linkList.First().beginNode.id);
+                linkTableMutex.ReleaseMutex();
+                foreach (LRMRCCommunications.Link linkToUpdate in batch.linkList)
                 {
-                    devicesTimers[receivedCallSign].Change(5000, 0);
+                    Link receivedLink = new Link(linkToUpdate);
+                    string receivedCallSign = receivedLink.getSourceRouter().getCallSign();
+
+
+                    dictionaryMutex.WaitOne();
+                    if (!devicesTimers.ContainsKey(receivedCallSign))
+                    {
+                        devicesStates.Add(receivedCallSign, true);
+                        devicesTimers.Add(receivedCallSign, new Timer(deviceDead, receivedCallSign, timeout, 0));
+                        consoleMutex.WaitOne();
+                        Logger.timestamp();
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.Write("Router " + receivedCallSign + " is ");
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("up");
+                        Console.ForegroundColor = ConsoleColor.White;
+                        consoleMutex.ReleaseMutex();
+
+                    }
+                    else
+                    {
+                        if (devicesStates[receivedCallSign] == true)
+                        {
+                            devicesTimers[receivedCallSign].Change(timeout, 0);
+                        }
+                        else
+                        {
+                            devicesStates[receivedCallSign] = true;
+                            devicesTimers[receivedCallSign] = new Timer(deviceDead, receivedCallSign, timeout, 0);
+                            consoleMutex.WaitOne();
+                            Logger.timestamp();
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write("Router " + receivedCallSign + " is ");
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("up");
+                            Console.ForegroundColor = ConsoleColor.White;
+                            consoleMutex.ReleaseMutex();
+                        }
+                    }
+                    dictionaryMutex.ReleaseMutex();
+
+                    linkTableMutex.WaitOne();
+                    bool change = linkTable.update(receivedLink);
+                    linkTableMutex.ReleaseMutex();
+
+                    if (change)
+                    {
+                        consoleMutex.WaitOne();
+                        Logger.timestamp();
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.Write("Received LocalTopology ");
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.WriteLine("(From: " + receivedLink.getSourceRouter().getCallSign() + " To: " + receivedLink.getDestinationRouter().getCallSign() + " Capacity: " + receivedLink.getCapacity() + ")");
+                        consoleMutex.ReleaseMutex();
+                    }
+
                 }
-                else
-                {
-                    devicesStates[receivedCallSign] = true;
-                    devicesTimers[receivedCallSign] = new Timer(deviceDead, receivedCallSign, timeout, 0);
-                    consoleMutex.WaitOne();
-                    Logger.timestamp();
-                    Console.ForegroundColor = ConsoleColor.White;
-                    Console.Write("Router " + receivedCallSign + " is ");
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("up");
-                    Console.ForegroundColor = ConsoleColor.White;
-                    consoleMutex.ReleaseMutex();
-                }
-            }
+
+            
 
 
-            bool change = linkTable.update(receivedLink);
-
-            linkTableMutex.ReleaseMutex();
-            if (change)
+            if (oldLinkCount > batch.linkList.Count)
             {
+                List<string> destinations = new List<string>();
+                foreach (LRMRCCommunications.Link link in batch.linkList)
+                    destinations.Add(link.endNode.id);
+                string start = batch.linkList.First().beginNode.id;
+
+                linkTableMutex.WaitOne();
+                linkTable.refresh(start, destinations);
+                linkTableMutex.ReleaseMutex();
+
                 consoleMutex.WaitOne();
                 Logger.timestamp();
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.Write("Received LocalTopology ");
                 Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("(From: " + receivedLink.getSourceRouter().getCallSign() + " To: " + receivedLink.getDestinationRouter().getCallSign() + " Capacity: " + receivedLink.getCapacity() + ")");
+                Console.WriteLine("(Availability update)");
                 consoleMutex.ReleaseMutex();
             }
-            
+            }
         }
 
         private void deviceDead(object state)

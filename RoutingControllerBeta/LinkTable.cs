@@ -85,6 +85,58 @@ namespace RoutingControllerBeta
 
             return true;
         }
+
+        public int getNumberOfLinksFrom(string callSign)
+        {
+            int count = 0;
+
+            foreach(Link link in linkList)
+            {
+                if(link.getSourceRouter().getCallSign().Equals(callSign))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public void refresh(string start, List<string> destinations)
+        {
+            bool repeat = false;
+            int index = -1;
+            do
+            {
+                index = -1;
+                repeat = false;
+                foreach (Link link in linkList)
+                {
+                    if (link.getSourceRouter().getCallSign().Equals(start))
+                    {
+                        bool lackOf = true;
+                        foreach (string destination in destinations)
+                        {
+                            if (destination.Equals(link.getDestinationRouter().getCallSign()))
+                            {
+                                lackOf = false;
+                            }
+                        }
+                        if (lackOf)
+                        {
+                            repeat = true;
+                            index = linkList.IndexOf(link);
+                            break;
+                        }
+                    }
+                }
+                if (index >= 0)
+                {
+                    linkList[index].write();
+                    linkList.RemoveAt(index);
+                }
+            } while (repeat);
+        }
+
     }
 
     

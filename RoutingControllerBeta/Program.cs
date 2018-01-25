@@ -18,7 +18,7 @@ namespace RoutingControllerBeta
             int RCReqPort = 0;
             int RCResPort = 0;
             int mainPort = 0;
-            int routerTimeout = 5000;
+            int routerTimeout = 1000;
             string addressesFileName = "addresses.txt";
             string name = "RC.0";
 

@@ -67,6 +67,7 @@ namespace RoutingControllerBeta
 
             }
             List<RCcommunications.Hop> transformedPath = new List<RCcommunications.Hop>();
+            
 
             if (!(pathToReturn == null))
             {
@@ -76,11 +77,11 @@ namespace RoutingControllerBeta
                             transformedPath.Add(new RCcommunications.Hop(link.getSourceRouter().getCallSign(), link.getSourceInterface(), link.getDestinationInterface(), link.getSourceRouter().getAutonomicNetworkCallSign(), link.getSourceRouter().getSubNetworkCallSign()));
                         else
                             transformedPath.Add(new RCcommunications.Hop(link.getSourceRouter().getCallSign(), 0, 0, link.getSourceRouter().getAutonomicNetworkCallSign(), link.getSourceRouter().getSubNetworkCallSign()));
-
+                    
                     }
             }
             
-            if(pathToReturn.getPath().Count > 0)
+            if(pathToReturn.getPath().Count > 0 )
                 transformedPath.Add(new RCcommunications.Hop(pathToReturn.getPath().Last().getDestinationRouter().getCallSign(), 0, 0, pathToReturn.getPath().Last().getDestinationRouter().getAutonomicNetworkCallSign(), pathToReturn.getPath().Last().getDestinationRouter().getSubNetworkCallSign()));
             
 

@@ -86,7 +86,17 @@ namespace RoutingControllerBeta
             this.destinationRouter = new Router(update.endNode.id, update.endNode.snId, update.endNode.asId);
             this.destinationInterface = update.endSNPP;
             this.capacity = update.capacity;
-            this.weight = 1 / update.capacity;
+            this.weight = (1/(double)update.capacity);
+        }
+
+        public Link(LRMRCCommunications.Link update)
+        {
+            this.sourceRouter = new Router(update.beginNode.id, update.beginNode.snId, update.beginNode.asId);
+            this.sourceInterface = update.beginSNPP;
+            this.destinationRouter = new Router(update.endNode.id, update.endNode.snId, update.endNode.asId);
+            this.destinationInterface = update.endSNPP;
+            this.capacity = update.capacity;
+            this.weight = (1 / (double)update.capacity);
         }
 
         public bool isEqual(Link linkToCompare)
